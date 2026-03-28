@@ -11,6 +11,7 @@ Click a single button above any function and CodeReel opens a split-pane panel s
 ## Demo
 
 ![CodeReel demo](https://placeholder-for-demo-gif.png)
+<img width="1298" height="742" alt="Screenshot 2026-03-28 at 12 54 30 PM" src="https://github.com/user-attachments/assets/f2675d0b-1886-4db6-97ff-92fa58ef257c" />
 
 1. Open any JavaScript, TypeScript, JSX, or TSX file
 2. Click **▶ Explain with CodeReel** above a function
