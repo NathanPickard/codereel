@@ -1,0 +1,40 @@
+{
+  "name": "codereel",
+  "displayName": "CodeReel",
+  "description": "Animated AI-powered code explanations",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onLanguage:javascript", "onLanguage:typescript", "onLanguage:javascriptreact", "onLanguage:typescriptreact"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codereel.explain",
+        "title": "CodeReel: Explain this function"
+      }
+    ],
+    "configuration": {
+      "title": "CodeReel",
+      "properties": {
+        "codereel.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Anthropic API key"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0"
+  }
+}
