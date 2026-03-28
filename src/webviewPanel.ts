@@ -4,14 +4,17 @@ import { Storyboard } from './claude';
 export class CodeReelPanel {
   private static instance: CodeReelPanel | undefined;
   private readonly panel: vscode.WebviewPanel;
+  private port: number;
 
-  private constructor(panel: vscode.WebviewPanel) {
+  private constructor(panel: vscode.WebviewPanel, port: number) {
     this.panel = panel;
+    this.port = port;
     this.panel.onDidDispose(() => { CodeReelPanel.instance = undefined; });
   }
 
-  static createOrShow(_extensionUri: vscode.Uri, functionName: string): CodeReelPanel {
+  static createOrShow(_extensionUri: vscode.Uri, functionName: string, port: number): CodeReelPanel {
     if (CodeReelPanel.instance) {
+      CodeReelPanel.instance.port = port;
       CodeReelPanel.instance.panel.reveal(vscode.ViewColumn.Beside);
       return CodeReelPanel.instance;
     }
@@ -24,7 +27,7 @@ export class CodeReelPanel {
         retainContextWhenHidden: true,
       }
     );
-    CodeReelPanel.instance = new CodeReelPanel(panel);
+    CodeReelPanel.instance = new CodeReelPanel(panel, port);
     return CodeReelPanel.instance;
   }
 
@@ -38,7 +41,7 @@ export class CodeReelPanel {
 
   render(storyboard: Storyboard, code: string) {
     this.panel.title = `CodeReel: ${storyboard.title}`;
-    this.panel.webview.html = renderHtml(storyboard, code);
+    this.panel.webview.html = renderHtml(storyboard, code, this.port);
   }
 }
 
@@ -58,7 +61,7 @@ function errorHtml(message: string): string {
   </body></html>`;
 }
 
-function renderHtml(storyboard: Storyboard, code: string): string {
+function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): string {
   const codeLines = code.split('\n');
   const framesJson = JSON.stringify(storyboard.frames);
   const codeLinesJson = JSON.stringify(codeLines);
@@ -67,6 +70,7 @@ function renderHtml(storyboard: Storyboard, code: string): string {
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-src http://localhost:${port}; img-src data:;">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -97,7 +101,7 @@ function renderHtml(storyboard: Storyboard, code: string): string {
     border-right: 1px solid #3c3c3c;
   }
   .right-pane {
-    width: 380px;
+    width: 420px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -341,8 +345,8 @@ function renderHtml(storyboard: Storyboard, code: string): string {
 
     <!-- RIGHT: live app iframe -->
     <div class="right-pane">
-      <div class="browser-label">Live App — localhost:5173</div>
-      <iframe class="browser-frame" src="http://localhost:5173" id="appFrame"></iframe>
+      <div class="browser-label">Live App — localhost:${port}</div>
+      <iframe class="browser-frame" src="http://localhost:${port}" id="appFrame"></iframe>
       <div class="ui-hint" id="uiHint"><span class="ui-hint-icon">👁</span> Click Play to see what changes in the UI</div>
     </div>
   </div>

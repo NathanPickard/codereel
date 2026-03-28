@@ -9,16 +9,8 @@ export interface ArrayViz {
   found?: number;
 }
 
-export interface TodoItem {
-  id: number;
-  text: string;
-  done: boolean;
-}
-
 export interface AppState {
-  todos?: TodoItem[];
-  filter?: string;
-  input?: string;
+  [key: string]: unknown;
 }
 
 export interface Frame {
@@ -77,12 +69,12 @@ Rules:
 - Variables should show concrete example values where possible
 - For viz: include "array" always when the function operates on an array. Include "left", "right", "mid" as 0-based indices whenever those pointers exist. Set "found" to the index if the target was found in this frame.
 - If the function does not use an array, omit "viz" entirely
-- If this looks like a React todo function, add two fields per frame:
-  1. "uiHint": a short phrase (under 10 words) describing what the user sees change in the browser
-  2. "appState": the exact React state at this point in execution, with this shape:
-     { "todos": [{"id": 1, "text": "Build a VS Code extension", "done": false}, ...], "filter": "all", "input": "" }
-     Use these as the base todos: [{"id":1,"text":"Build a VS Code extension","done":false},{"id":2,"text":"Demo CodeReel at hackathon","done":false},{"id":3,"text":"Win the hackathon","done":false}]
-     Show the state AS IT WOULD BE at the end of that frame executing (e.g. after addTodo, include the new todo in the array)
+- If this looks like a React function (uses useState values, calls setState, references state variables like cart, todos, filter, etc.), add two fields per frame:
+  1. "uiHint": a short phrase (under 10 words) describing what the user sees change in the browser UI
+  2. "appState": the exact React state at the END of that frame executing. Infer the state variable names directly from the function code (e.g. if the function uses "cart", use key "cart"; if it uses "todos", use key "todos"). Use realistic concrete example data.
+     For cart/shopping functions, use: cart=[{id:1,name:"Mechanical Keyboard",price:89.99,emoji:"⌨️",qty:1},{id:2,name:"Wireless Mouse",price:49.99,emoji:"🖱️",qty:1}]
+     For todo functions, use: todos=[{id:1,text:"Build a VS Code extension",done:false},{id:2,text:"Demo CodeReel at hackathon",done:false},{id:3,text:"Win the hackathon",done:false}]
+     Show the state AS IT WOULD BE after that frame executes (e.g. after addToCart, include the new item in cart)
 - Focus on the interesting algorithmic steps, not boilerplate`;
 
   const message = await client.messages.create({

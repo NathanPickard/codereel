@@ -31,7 +31,8 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const panel = CodeReelPanel.createOrShow(context.extensionUri, args.functionName);
+      const port = vscode.workspace.getConfiguration('codereel').get<number>('appPort') ?? 5173;
+      const panel = CodeReelPanel.createOrShow(context.extensionUri, args.functionName, port);
       panel.showLoading();
 
       try {

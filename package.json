@@ -21,6 +21,11 @@
           "type": "string",
           "default": "",
           "description": "Your Anthropic API key"
+        },
+        "codereel.appPort": {
+          "type": "number",
+          "default": 5173,
+          "description": "Port your local app is running on (e.g. 5173 for Vite, 3000 for CRA)"
         }
       }
     }
