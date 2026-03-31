@@ -20,7 +20,7 @@ No video files are generated. Everything runs live inside VS Code using a WebVie
 
 ## How It Works
 
-### 1. CodeLens button
+### 1. CodeReel button
 VS Code displays an inline **▶ Explain with CodeReel** link above every detected function in JS, TS, JSX, and TSX files. No setup required — it appears automatically when the extension is active.
 
 ### 2. Claude AI generates a storyboard

@@ -27,45 +27,34 @@ export class CodeReelPanel {
         retainContextWhenHidden: true,
       }
     );
-    CodeReelPanel.instance = new CodeReelPanel(panel, port);
+    const instance = new CodeReelPanel(panel, port);
+    // Load the shell once — never replaced again
+    panel.webview.html = shellHtml(port);
+    CodeReelPanel.instance = instance;
     return CodeReelPanel.instance;
   }
 
   showLoading() {
-    this.panel.webview.html = loadingHtml();
+    this.panel.webview.postMessage({ type: 'loading' });
   }
 
   showError(message: string) {
-    this.panel.webview.html = errorHtml(message);
+    this.panel.webview.postMessage({ type: 'error', message });
   }
 
   render(storyboard: Storyboard, code: string) {
     this.panel.title = `CodeReel: ${storyboard.title}`;
-    this.panel.webview.html = renderHtml(storyboard, code, this.port);
+    this.panel.webview.postMessage({
+      type: 'storyboard',
+      title: storyboard.title,
+      summary: storyboard.summary,
+      frames: storyboard.frames,
+      codeLines: code.split('\n'),
+    });
   }
 }
 
-function loadingHtml(): string {
-  return `<!DOCTYPE html><html><body style="background:#1e1e1e;color:#ccc;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-    <div style="text-align:center">
-      <div style="font-size:48px;animation:spin 1s linear infinite;display:inline-block">⚙️</div>
-      <p style="margin-top:16px;font-size:18px">Generating CodeReel...</p>
-    </div>
-    <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
-  </body></html>`;
-}
-
-function errorHtml(message: string): string {
-  return `<!DOCTYPE html><html><body style="background:#1e1e1e;color:#f48771;font-family:sans-serif;padding:32px;">
-    <h2>CodeReel Error</h2><p>${escapeHtml(message)}</p>
-  </body></html>`;
-}
-
-function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): string {
-  const codeLines = code.split('\n');
-  const framesJson = JSON.stringify(storyboard.frames);
-  const codeLinesJson = JSON.stringify(codeLines);
-
+function shellHtml(port: number): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -313,8 +302,8 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
 </head>
 <body>
   <div class="top-bar">
-    <h1>${escapeHtml(storyboard.title)}</h1>
-    <p class="summary">${escapeHtml(storyboard.summary)}</p>
+    <h1 id="title">Generating CodeReel...</h1>
+    <p class="summary" id="summary"></p>
   </div>
 
   <div class="split-pane">
@@ -328,7 +317,7 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
       </div>
 
       <div class="annotation-box">
-        <div class="annotation-text" id="annotation">Press Play to start</div>
+        <div class="annotation-text" id="annotation">Waiting for CodeReel...</div>
         <div class="variables" id="variables"></div>
       </div>
 
@@ -336,9 +325,9 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
 
       <div class="controls">
         <button id="prevBtn" disabled>◀ Prev</button>
-        <button class="play-btn" id="playBtn">▶ Play</button>
-        <button id="nextBtn">Next ▶</button>
-        <span class="progress" id="progress">Step 0 / ${storyboard.frames.length}</span>
+        <button class="play-btn" id="playBtn" disabled>▶ Play</button>
+        <button id="nextBtn" disabled>Next ▶</button>
+        <span class="progress" id="progress"></span>
         <div class="frame-dots" id="dots"></div>
       </div>
     </div>
@@ -352,12 +341,14 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
   </div>
 
 <script>
-  const frames = ${framesJson};
-  const codeLines = ${codeLinesJson};
+  let frames = [];
+  let codeLines = [];
   let current = -1;
   let playing = false;
   let timer = null;
 
+  const titleEl = document.getElementById('title');
+  const summaryEl = document.getElementById('summary');
   const codeBlock = document.getElementById('codeBlock');
   const annotation = document.getElementById('annotation');
   const variables = document.getElementById('variables');
@@ -367,21 +358,73 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
   const progress = document.getElementById('progress');
   const dotsContainer = document.getElementById('dots');
 
-  // Build code lines
-  codeLines.forEach((line, i) => {
-    const div = document.createElement('div');
-    div.className = 'code-line';
-    div.id = 'line-' + i;
-    div.textContent = line || ' ';
-    codeBlock.appendChild(div);
-  });
+  // Listen for messages from the extension
+  window.addEventListener('message', event => {
+    const msg = event.data;
+    if (!msg || !msg.type) return;
 
-  // Build dots
-  frames.forEach((_, i) => {
-    const dot = document.createElement('div');
-    dot.className = 'dot';
-    dot.id = 'dot-' + i;
-    dotsContainer.appendChild(dot);
+    if (msg.type === 'loading') {
+      stopPlay();
+      titleEl.textContent = 'Generating CodeReel...';
+      summaryEl.textContent = '';
+      annotation.textContent = 'Waiting for CodeReel...';
+      codeBlock.innerHTML = '';
+      dotsContainer.innerHTML = '';
+      variables.innerHTML = '';
+      progress.textContent = '';
+      playBtn.disabled = true;
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+      document.getElementById('vizContainer').style.display = 'none';
+      return;
+    }
+
+    if (msg.type === 'error') {
+      titleEl.textContent = 'CodeReel Error';
+      summaryEl.textContent = '';
+      annotation.textContent = msg.message;
+      annotation.style.color = '#f48771';
+      playBtn.disabled = true;
+      return;
+    }
+
+    if (msg.type === 'storyboard') {
+      stopPlay();
+      frames = msg.frames;
+      codeLines = msg.codeLines;
+      current = -1;
+
+      titleEl.textContent = msg.title;
+      summaryEl.textContent = msg.summary;
+      annotation.textContent = 'Press Play to start';
+      annotation.style.color = '';
+      variables.innerHTML = '';
+      progress.textContent = 'Step 0 / ' + frames.length;
+      playBtn.disabled = false;
+      prevBtn.disabled = true;
+      nextBtn.disabled = false;
+
+      // Rebuild code lines
+      codeBlock.innerHTML = '';
+      codeLines.forEach((line, i) => {
+        const div = document.createElement('div');
+        div.className = 'code-line';
+        div.id = 'line-' + i;
+        div.textContent = line || ' ';
+        codeBlock.appendChild(div);
+      });
+
+      // Rebuild dots
+      dotsContainer.innerHTML = '';
+      frames.forEach((_, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        dot.id = 'dot-' + i;
+        dotsContainer.appendChild(dot);
+      });
+
+      setTimeout(startPlay, 400);
+    }
   });
 
   function renderViz(viz) {
@@ -527,9 +570,6 @@ function renderHtml(storyboard: Storyboard, code: string, port: number = 5173): 
   playBtn.addEventListener('click', () => playing ? stopPlay() : startPlay());
   nextBtn.addEventListener('click', () => { stopPlay(); next(); });
   prevBtn.addEventListener('click', () => { stopPlay(); prev(); });
-
-  // Auto-start
-  setTimeout(startPlay, 400);
 </script>
 </body>
 </html>`;
