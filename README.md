@@ -14,6 +14,7 @@ When you click **▶ Explain with CodeReel** above any function, a split-pane pa
 - **Right pane** — your live React app running in an iframe, updating its state in real time to match each step of the animation
 
 No video files are generated. Everything runs live inside VS Code using a WebView renderer.
+<img width="1298" height="742" alt="Screenshot 2026-03-28 at 12 54 30 PM" src="https://github.com/user-attachments/assets/ba55e148-ab7c-4291-8bda-3d449fd2984c" />
 
 ---
 
